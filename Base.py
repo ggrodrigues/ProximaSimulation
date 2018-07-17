@@ -78,7 +78,7 @@ class Base:
        
         while self.stop == False:
             if self.pause == False:
-                if time.clock() - self.currentTime >= 0.01:
+                if time.clock() - self.currentTime >= 0.05:
                    self.elapsedTime = self.elapsedTime +(time.clock() - self.currentTime)
                    self.currentTime = time.clock()
                    

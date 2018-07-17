@@ -1,11 +1,13 @@
 from tkinter import *
 from PIL import Image, ImageTk
 from processGUI import CustomWidget
+import math
 
 class Janela:   
     playing = FALSE
     lastEvent = ""
-    
+    dragCustom = False
+
         
     def getEvent(self):
         event = self.lastEvent
@@ -31,9 +33,31 @@ class Janela:
         self.lastEvent = "mainWindowClosed"
         self.raiz.destroy()
     
-    def customPressHandler(self,event):
-        print("customWidgetPressed")
+    def mouseMotionHandler(self,event):
+        self.mousePos = [event.x,event.y]
+        #print(self.mousePos)
         return
+    
+    def customHoldHandler(self,event):  
+        currentMousePos = [self.custom.winfo_pointerx(), self.custom.winfo_pointery()]
+        error = [-self.startMousePos[0] + currentMousePos[0], -self.startMousePos[1] +currentMousePos[1]]
+        
+        self.custom.place(x = self.startCustomPos[0]+error[0], y =self.startCustomPos[1]+error[1])
+        
+        
+        print (error)
+       
+        return
+        
+    def customPressHandler(self,event):
+        self.startMousePos = [self.custom.winfo_pointerx(), self.custom.winfo_pointery()]
+        self.startCustomPos = [self.custom.winfo_x(), self.custom.winfo_y()]
+        #16/07 descobri a função winfo_pointerx, retorna a posição do mouse em relação à
+        #raiz a qualquer momento
+        print ( self.custom.winfo_rootx())
+      
+        return
+        
         
             
                 
@@ -52,7 +76,7 @@ class Janela:
         self.barContainer.grid_propagate(0)
         self.barContainer.pack()
         
-        self.simulationContainer = Frame(self.topContainer, padx = 0, pady = 4, bg = "white", bd = 4, height = 400, width = 600)
+        self.simulationContainer = Frame(self.topContainer, padx = 0, pady = 4, bg = "white", highlightthickness=3, highlightcolor = "blue", height = 400, width = 600)
         self.simulationContainer.pack()
         
         self.title = Label(self.titleContainer, text = 'Proxima Simulation', bg = "white")
@@ -80,8 +104,9 @@ class Janela:
         self.simuTimeText.pack(side = RIGHT)
         
         self.custom = CustomWidget(self.simulationContainer, "Process 1")
+        self.custom.bind("<B1-Motion>",self.customHoldHandler)
         self.custom.bind("<Button-1>",self.customPressHandler)
-        self.custom.place(x = 200, y = 200)
+        self.custom.place(x = 0, y = 0)
         
 j = Janela()
 j.open()
