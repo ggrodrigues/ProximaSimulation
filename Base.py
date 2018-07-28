@@ -1,5 +1,6 @@
 import time
 import threading 
+from Station import Station
 from GUI import Janela
 
 class Base:
@@ -12,8 +13,11 @@ class Base:
     subscribers = []
     connectionMatrix = []
     stop = False
-    pause = False
+    pause = True
+    nextProcess = 0
     
+    
+
     
     def playClick(self):
         print("playClicked")
@@ -22,6 +26,19 @@ class Base:
         else:
             self.currentTime = time.clock()
             self.pause = False
+        return
+        
+    def addClick(self):
+        
+        s = Station("process" + str(self.nextProcess), 2 )
+        self.nextProcess = self.nextProcess + 1
+        self.subscribe(s)
+        print("addClicked")
+        return
+        
+    def newConnection(self):
+
+        print("newConnection")
         return
             
     def mainWindowClosedClick(self):
@@ -33,15 +50,17 @@ class Base:
         
         return
             
-    def frameClick(self):
-        print("frameClicked")
     
     eventHandler = {
+        'newConnectionMade': newConnection,
         'playButtonClick' : playClick,
-        'frameClick' : frameClick,
+        'addButtonClick' : addClick,
         'mainWindowClosed' : mainWindowClosedClick
     }
     
+    def onGuiEvent(self, event):
+        self.eventHandler[event](self)
+        return
     
     
 
@@ -52,9 +71,10 @@ class Base:
 
     def tick(self):
         print("%.2f" % (self.elapsedTime))
-        
+        self.j.simuTimeText["text"] = '%.1f s'  % (self.elapsedTime)
         for s in self.subscribers:
             s.tick()
+            self.j.updateProcess(s)
         return
             
 
@@ -78,18 +98,11 @@ class Base:
        
         while self.stop == False:
             if self.pause == False:
-                if time.clock() - self.currentTime >= 0.05:
+                if time.clock() - self.currentTime >= 0.1:
                    self.elapsedTime = self.elapsedTime +(time.clock() - self.currentTime)
                    self.currentTime = time.clock()
-                   
                    self.tick()
                    
-            if hasattr(self, 'j'):
-                self.j.simuTimeText["text"] = '%.1f s'  % (self.elapsedTime)
-                event = self.j.getEvent()
-                if bool(event):
-                    if event in self.eventHandler:
-                        self.eventHandler[event](self)
         print("run thread terminating")
         return
            
@@ -102,7 +115,7 @@ class Base:
 
     def guiOpen(self):
         self.j = Janela()
-        self.j.open()
+        self.j.open(self.onGuiEvent)
         
         return
     
@@ -122,6 +135,7 @@ class Base:
 
     def subscribe(self,object):
         self.subscribers.append(object)
+        self.j.addSubscriber(object)
         return
 
     def __init__(self):

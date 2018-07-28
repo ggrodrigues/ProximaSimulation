@@ -7,61 +7,124 @@ class Janela:
     playing = FALSE
     lastEvent = ""
     dragCustom = False
-
-        
+    subscribers = []
+    
     def getEvent(self):
         event = self.lastEvent
         self.lastEvent = ""
         return event
        
-    def open(self):
+    def open(self, callback):
+        self.callback = callback
         self.raiz.mainloop()
+        return
     
     
     def playButtonPressHandler(self):
-        self.lastEvent = "playButtonClick"
-        if self.playing == TRUE:
+        self.callback("playButtonClick")
+        if self.playing == FALSE:
             self.playButton["image"] = self.photoPause
-            self.playing = FALSE
-            
+            self.playing = TRUE
         else:
             self.playButton["image"] = self.photoPlay
-            self.playing = TRUE
+            self.playing = FALSE
+        return
+    
+    def addButtonPressHandler(self):
+        self.callback("addButtonClick")
+        
+        return
       
     def closeWindowPressHandler(self):
-        print("windowClosed")
-        self.lastEvent = "mainWindowClosed"
-        self.raiz.destroy()
+        self.callback("mainWindowClosed")
+        
     
     def mouseMotionHandler(self,event):
         self.mousePos = [event.x,event.y]
-        #print(self.mousePos)
+        return
+    
+    def customLetGoHandler(self,event):  
+        
+        parentName = event.widget.winfo_parent()
+        parent = self.raiz.nametowidget(parentName)
+        currentMousePos = [parent.winfo_pointerx(), parent.winfo_pointery()]
+        error = [-self.startMousePos[0] + currentMousePos[0], -self.startMousePos[1] +currentMousePos[1]]
+        squarePos = self.simulationContainer.bbox("dislocationRec")
+        parent.place(x = squarePos[0], y = squarePos[1])
+        self.simulationContainer.delete("dislocationRec")
+        
+
         return
     
     def customHoldHandler(self,event):  
-        currentMousePos = [self.custom.winfo_pointerx(), self.custom.winfo_pointery()]
+        parentName = event.widget.winfo_parent()
+        parent = self.raiz.nametowidget(parentName)
+        currentMousePos = [parent.winfo_pointerx(), parent.winfo_pointery()]
         error = [-self.startMousePos[0] + currentMousePos[0], -self.startMousePos[1] +currentMousePos[1]]
+        #self.simulationContainer.coords("dislocationRec",    self.startCustomPos[0]+error[0]     ,self.startCustomPos[1]+error[1]           ,self.startCustomPos[0]+error[0]+parent.winfo_width(), self.startCustomPos[1]+error[1]+parent.winfo_height())
+        for i in self.inputs:
+           if len(self.inputs) > 1 and i != [self.startCustomPos[0],self.startCustomPos[1] + parent.winfo_height()/2]:
+                parentOutput = [self.startCustomPos[0]+error[0]+ parent.winfo_width() ,self.startCustomPos[1]+error[1]  + parent.winfo_height()/2]
+                if (math.hypot(i[0]-parentOutput[0],i[1]-parentOutput[1])) < 15:
+                    print(math.hypot(i[0]-parentOutput[0],i[1]-parentOutput[1]))
+                    print("close enough")
+                    self.simulationContainer.coords("dislocationRec", (i[0] - parent.winfo_width() , (i[1] - parent.winfo_height()/2 )+1, i[0], i[1] + parent.winfo_height()/2 ))
+                else:
+                    self.simulationContainer.coords("dislocationRec",    self.startCustomPos[0]+error[0]     ,self.startCustomPos[1]+error[1]           ,self.startCustomPos[0]+error[0]+parent.winfo_width(), self.startCustomPos[1]+error[1]+parent.winfo_height())
+           elif len(self.inputs) == 1:
+                self.simulationContainer.coords("dislocationRec",    self.startCustomPos[0]+error[0]     ,self.startCustomPos[1]+error[1]           ,self.startCustomPos[0]+error[0]+parent.winfo_width(), self.startCustomPos[1]+error[1]+parent.winfo_height())
+                    
+           #print(i)
+           #print(self.startCustomPos[0],self.startCustomPos[1] + parent.winfo_height()/2)
+            
         
-        self.custom.place(x = self.startCustomPos[0]+error[0], y =self.startCustomPos[1]+error[1])
+        #for o in self.outputs:
+            #print(o)
+            #print(self.startCustomPos[0]+ parent.winfo_width() ,self.startCustomPos[1] + parent.winfo_height()/2)
         
+        #parent.place(x = self.startCustomPos[0]+error[0], y =self.startCustomPos[1]+error[1])
         
-        print (error)
-       
+
         return
+        
         
     def customPressHandler(self,event):
-        self.startMousePos = [self.custom.winfo_pointerx(), self.custom.winfo_pointery()]
-        self.startCustomPos = [self.custom.winfo_x(), self.custom.winfo_y()]
-        #16/07 descobri a função winfo_pointerx, retorna a posição do mouse em relação à
-        #raiz a qualquer momento
-        print ( self.custom.winfo_rootx())
-      
+        self.inputs = []
+        self.outputs = []
+        for w in self.simulationContainer.children:
+            widget = self.simulationContainer.nametowidget(w)
+            self.inputs.append([widget.winfo_x(),widget.winfo_y()+widget.winfo_height()/2])
+            self.outputs.append([widget.winfo_x()+widget.winfo_width(),widget.winfo_y()+widget.winfo_height()/2])
+        print(self.inputs)
+        print(self.outputs)
+        parentName = event.widget.winfo_parent()
+        parent = self.raiz.nametowidget(parentName)
+        self.startMousePos = [parent.winfo_pointerx(), parent.winfo_pointery()]
+        self.startCustomPos = [parent.winfo_x(), parent.winfo_y()]
+        self.simulationContainer.create_rectangle(parent.winfo_x(),parent.winfo_y(), parent.winfo_x()+parent.winfo_width(), parent.winfo_y()+parent.winfo_height(),fill = "#29b6f6",stipple = "gray75", width = 2,outline = "gray", tag = "dislocationRec")
+        self.simulationContainer.tag_raise("dislocationRec")
+        parent.place(x = 500,y = 500)
+        return
+    
+    def updateProcess(self,object):
+        for x in self.subscribers:
+            if x.label.cget("text") == object.name:
+                x.updateTime(object.currentCycleTime)
+                break
         return
         
         
             
-                
-            
+    def addSubscriber(self,object):
+        widget = CustomWidget(self.simulationContainer,object.name)
+        widget.place(x = 200,y = 200)
+        widget.bind("<B1-Motion>",self.customHoldHandler)
+        widget.bind("<Button-1>",self.customPressHandler)
+        widget.bind("<ButtonRelease-1>",self.customLetGoHandler)
+        self.subscribers.append(widget)
+        return
+        
+        
     def __init__(self):
         self.raiz = Tk()
         self.raiz.protocol("WM_DELETE_WINDOW", self.closeWindowPressHandler)
@@ -76,7 +139,7 @@ class Janela:
         self.barContainer.grid_propagate(0)
         self.barContainer.pack()
         
-        self.simulationContainer = Frame(self.topContainer, padx = 0, pady = 4, bg = "white", highlightthickness=3, highlightcolor = "blue", height = 400, width = 600)
+        self.simulationContainer = Canvas(self.topContainer, bg = "white", highlightthickness=3, highlightcolor = "blue", height = 400, width = 600)
         self.simulationContainer.pack()
         
         self.title = Label(self.titleContainer, text = 'Proxima Simulation', bg = "white")
@@ -95,18 +158,20 @@ class Janela:
         self.photoPause = ImageTk.PhotoImage(self.imagePause)
         
         self.playButton = Button(self.barContainer,image = self.photoPlay ,command=self.playButtonPressHandler, bg = "white", height = 20, width = 20, compound = LEFT)
-        
         self.playButton.pack(side = RIGHT)
         
+        self.imageAdd = Image.open(r"C:\Users\rodri\Proxima Simulation\add.jpg")
+        self.imageAdd = self.imageAdd.resize((20,20), Image.ANTIALIAS)
+        self.photoAdd = ImageTk.PhotoImage(self.imageAdd)
+        self.addButton = Button(self.barContainer,image = self.photoAdd ,command=self.addButtonPressHandler, bg = "white", height = 20, width = 20, compound = LEFT)
+        self.addButton.pack(side = RIGHT)
+       
         
         self.simuTimeText = Label(self.barContainer, text = '0.00', bg = "white")
         self.simuTimeText["font"] = ("MS PGothic","12")
         self.simuTimeText.pack(side = RIGHT)
         
-        self.custom = CustomWidget(self.simulationContainer, "Process 1")
-        self.custom.bind("<B1-Motion>",self.customHoldHandler)
-        self.custom.bind("<Button-1>",self.customPressHandler)
-        self.custom.place(x = 0, y = 0)
         
-j = Janela()
-j.open()
+
+#j = Janela()
+#j.open()

@@ -16,7 +16,8 @@ class Station:
         #print ("%.2f" % self.currentCycleTime)
         self.lastTick = time.clock()
         
-    def __init__(self, cycleTime):
-        print('oi')
+    def __init__(self, processName,cycleTime):
+        print('processName')
+        self.name = processName
         self.cycleTime = cycleTime
         self.lastTick = time.clock()
